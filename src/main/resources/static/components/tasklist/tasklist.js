@@ -54,13 +54,14 @@ class TaskList extends HTMLElement {
     /** @type {HTMLTableSectionElement} */
     #tbody
     #taskCount = 0
+	#shadowRoot
 
     constructor() {
         super();
 
-        this.attachShadow({mode: "open"})
+        this.#shadowRoot = this.attachShadow({mode: "closed"})
         this.#init()
-        this.shadowRoot.appendChild(this.#container)
+        this.#shadowRoot.appendChild(this.#container)
         this.#toggleTable()
     }
 
@@ -139,7 +140,6 @@ class TaskList extends HTMLElement {
                 if (newStatus !== originalStatus) {
                     if (this.#changeCallback && confirm(`set '${task.title}' to ${newStatus}`)) {
                         this.#changeCallback(task.id, newStatus)
-                        this.updateTask({...task, status: newStatus})
                     }
                 }
                 select.value = originalStatus
@@ -147,11 +147,11 @@ class TaskList extends HTMLElement {
         }
 
         const button = trTask.querySelector("button")
-        if (button) {
+        if (button != null) {
             button.addEventListener("click", () => {
                 if (this.#deleteCallback && confirm(`delete task '${task.title}'?`)) {
                     this.#deleteCallback(task.id)
-                    this.removeTask(task.id)
+                    
                 }
             })
         }

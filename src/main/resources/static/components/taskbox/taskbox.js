@@ -29,17 +29,18 @@ class TaskBox extends HTMLElement {
     /** @type Callback */
     #callback
     /** @type {function} */
-    #previousClickListener // Added this line to keep track of previous click listener
+    #previousClickListener //keep track of previous click listener
+	#shadowRoot;
 
     constructor() {
         super();
 
-        this.attachShadow({mode: "open"})
+        this.#shadowRoot = this.attachShadow({mode: "closed"})
 
         const clone = template.content.cloneNode(true)
         this.#dialog = clone.querySelector("dialog")
 
-        this.shadowRoot.appendChild(clone)
+        this.#shadowRoot.appendChild(clone)
     }
 
     /**
@@ -50,7 +51,7 @@ class TaskBox extends HTMLElement {
         this.#dialog.show()
 
         // populate the statuses
-        const select = this.shadowRoot.querySelector("select")
+        const select = this.#shadowRoot.querySelector("select")
         select.innerText = ''; // Clear existing options
         this.#statusList.forEach(status => {
             const option = document.createElement("option")
@@ -59,13 +60,13 @@ class TaskBox extends HTMLElement {
             select.appendChild(option)
         })
 
-        const button = this.shadowRoot.querySelector("button")
+        const button = this.#shadowRoot.querySelector("button")
         if (this.#previousClickListener) {
             button.removeEventListener("click", this.#previousClickListener)
         }
 
         const newClickListener = () => {
-            const titleInput = this.shadowRoot.querySelector("input").value.trim()
+            const titleInput = this.#shadowRoot.querySelector("input").value.trim()
 
             // only allow input without an empty string
             if (this.#callback && titleInput.length > 0) {
@@ -80,7 +81,7 @@ class TaskBox extends HTMLElement {
         // Save the reference to the new click listener
         this.#previousClickListener = newClickListener
 
-        this.shadowRoot.querySelector("span").addEventListener("click", this.close.bind(this))
+        this.#shadowRoot.querySelector("span").addEventListener("click", this.close.bind(this))
     }
 
     /**
