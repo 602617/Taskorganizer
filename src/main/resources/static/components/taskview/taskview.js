@@ -71,7 +71,7 @@ class TaskView extends HTMLElement {
 		});
 
 		this.#taskList.changeStatusCallback(async (id, newStatus) => {
-			const response = await this.#put(`/task/${id}`, "id", { status: newStatus });
+			const response = await this.#fetch(`/task/${id}`, "PUT", { status: newStatus });
 			if (response.responseStatus) {
 				this.#message.textContent = "Changed 1 task";
 				this.#taskList.updateTask({ id, status: newStatus })
@@ -95,82 +95,75 @@ class TaskView extends HTMLElement {
 
 	async #fetchStatuses() {
 		try {
-			const allStatuses = await this.#get("/allstatuses", "allstatuses");
-			this.#taskList.setStatusesList(allStatuses);
-			this.#dialog.setStatusesList(allStatuses);
-			this.#fetchTasks();
-			const button = this.#shadowRoot.querySelector("#newtask button");
-			button.disabled = false;
-		} catch (error) {
-			console.error("Failed to fetch statuses:", error);
-			this.#message.textContent = "Error fetching statuses.";
-		}
+		        const data = await this.#fetch("/allstatuses", "GET"); // Calls the correct endpoint
+		        const allStatuses = data.allstatuses; // Access the `allstatuses` array directly
+
+		        // Check if allStatuses is an array and proceed if true
+		        if (Array.isArray(allStatuses)) {
+		            this.#taskList.setStatusesList(allStatuses);
+		            this.#dialog.setStatusesList(allStatuses);
+		        } else {
+		            console.error("Unexpected response format for allstatuses:", allStatuses);
+		            this.#message.textContent = "Error fetching statuses.";
+		            return;
+		        }
+
+		        await this.#fetchTasks(); // Proceed to fetch tasks only after statuses are fetched
+
+		        const button = this.#shadowRoot.querySelector("#newtask button");
+		        button.disabled = false;
+		    } catch (error) {
+		        console.error("Failed to fetch statuses:", error);
+		        this.#message.textContent = "Error fetching statuses.";
+		    }
 	}
 
 	async #fetchTasks() {
-		try {
-			/** @type Task[] */
-			const tasks = await this.#get("/tasklist", "tasks");
-			tasks.forEach((task) => this.#taskList.showTask(task));
-			this.#message.textContent = `Found ${tasks.length} tasks.`;
-
-		} catch (error) {
-			console.error("Failed to fetch tasks:", error);
-			this.#message.textContent = "Error fetching tasks.";
-		}
+	    try {
+	        const data = await this.#fetch("/tasklist", "GET"); // This will resolve to ./api/tasklist
+	        
+	        const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
+	        
+	        if (tasks.length === 0) {
+	            this.#message.textContent = "No tasks found.";
+	        } else {
+	            tasks.forEach((task) => this.#taskList.showTask(task));
+	            this.#message.textContent = `Found ${tasks.length} tasks.`;
+	        }
+	    } catch (error) {
+	        console.error("Failed to fetch tasks:", error);
+	        this.#message.textContent = "Error fetching tasks.";
+	    }
 	}
 //fjern
-	async #get(path, key) {
-		const data = await this.#fetch(path, "GET");
-		if (typeof data !== "object") {
-			throw new SyntaxError("Unexpected response format. Expected JSON.");
-		}
-		return data[key];
-	}
+	
 
-	async #delete(path, key) {
-		const data = await this.#fetch(path, "DELETE");
-		return data[key];
-	}
+	
 
-	async #put(path, key, payload) {
-		const data = await this.#fetch(path, "PUT", payload);
-		return data;
-	}
-
-	async #post(path, key, payload) {
+	async #post(path, payload) {
 		const data = await this.#fetch(path, "POST", payload);
 		return data;
 	}
 
-	async #fetch(path, method, payload = undefined) {
+	async #fetch(path, method = "GET", payload = null) {
 		const url = this.#config + path;
 		const options = {
 			method,
 			headers: { "Content-Type": "application/json; charset=utf-8" },
+			...(payload && { body: JSON.stringify(payload) }),
 		};
-
-		if (method !== "GET" && payload) {
-			options.body = JSON.stringify(payload);
-		}
 
 		const res = await fetch(url, options);
 
 		if (!res.ok) {
-			console.error(`HTTP error! status: ${res.status}, URL: ${url}`);
-			if (res.status === 404) {
-				throw new Error(`Resource not found: ${url}`);
-			} else {
-				throw new Error(`HTTP error! status: ${res.status}`);
-			}
+			throw new Error(`HTTP error! Status: ${res.status} at URL: ${url}`);
 		}
 
-		const contentType = res.headers.get("content-type");
-		if (contentType && contentType.includes("application/json")) {
-			return await res.json();
-		} else {
-			throw new SyntaxError("Unexpected response format. Expected JSON.");
-		}
+		try {
+		        return await res.json();
+		    } catch (error) {
+		        throw new SyntaxError("Unexpected response format. Expected JSON.");
+		    }
 	}
 }
 

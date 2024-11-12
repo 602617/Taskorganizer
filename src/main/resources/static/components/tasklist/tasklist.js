@@ -117,6 +117,7 @@ class TaskList extends HTMLElement {
      * @param {Task} task - Object representing a task
      */
     showTask(task) {
+		
         this.#taskCount++
 
         /**@type {HTMLTableRowElement}*/
